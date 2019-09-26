@@ -27,6 +27,11 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "os1_cloud_node");
     ros::NodeHandle nh("~");
 
+    auto stamp_now = nh.param("stamp_now", false);
+    ROS_INFO("Stamp messages with current time: %i.", stamp_now);
+    auto stamp_offset = nh.param("stamp_offset", 0.0);
+    ROS_INFO("Add message stamp offset: %.3g s.", stamp_offset);
+
     auto tf_prefix = nh.param("tf_prefix", std::string{});
     auto sensor_frame = tf_prefix + "/os1_sensor";
     auto imu_frame = tf_prefix + "/os1_imu";
@@ -59,6 +64,11 @@ int main(int argc, char** argv) {
         [&](uint64_t scan_ts) mutable {
             msg = ouster_ros::OS1::cloud_to_cloud_msg(
                 cloud, std::chrono::nanoseconds{scan_ts}, lidar_frame);
+            if (stamp_now) {
+                // Get stamps more or less in sync, if not hw synchronized.
+                msg.header.stamp = ros::Time::now();
+            }
+            msg.header.stamp += ros::Duration(stamp_offset);
             lidar_pub.publish(msg);
         });
 
@@ -67,7 +77,13 @@ int main(int argc, char** argv) {
     };
 
     auto imu_handler = [&](const PacketMsg& p) {
-        imu_pub.publish(ouster_ros::OS1::packet_to_imu_msg(p, imu_frame));
+        auto msg = ouster_ros::OS1::packet_to_imu_msg(p, imu_frame);
+        if (stamp_now) {
+            // Get stamps more or less in sync, if not hw synchronized.
+            msg.header.stamp = ros::Time::now();
+        }
+        msg.header.stamp += ros::Duration(stamp_offset);
+        imu_pub.publish(msg);
     };
 
     auto lidar_packet_sub = nh.subscribe<PacketMsg, const PacketMsg&>(
