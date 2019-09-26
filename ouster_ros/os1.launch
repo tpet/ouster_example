@@ -9,6 +9,9 @@
   <arg name="metadata" default="" doc="override default metadata file for replays"/>
   <arg name="viz" default="false" doc="whether to run a simple visualizer"/>
   <arg name="image" default="false" doc="publish range/intensity/noise image topic"/>
+  <arg name="stamp_now" default="false" doc="override message timestamps with current time"/>
+  <arg name="stamp_offset" default="0.0" doc="introduce offset to message timestamps"/>
+
 
   <node pkg="ouster_ros" name="os1_node" type="os1_node" output="screen" required="true">
     <param name="~/lidar_mode" type="string" value="$(arg lidar_mode)"/>
@@ -21,6 +24,8 @@
   </node>
 
   <node pkg="ouster_ros" type="os1_cloud_node" name="os1_cloud_node" output="screen" required="true">
+    <param name="stamp_now" type="bool" value="$(arg stamp_now)"/>
+    <param name="stamp_offset" type="double" value="$(arg stamp_offset)"/>
     <remap from="~/os1_config" to="/os1_node/os1_config"/>
     <remap from="~/lidar_packets" to="/os1_node/lidar_packets"/>
     <remap from="~/imu_packets" to="/os1_node/imu_packets"/>
